@@ -36,12 +36,26 @@ license {
     name: "external_mockito_kotlin_license",
     visibility: [":__subpackages__"],
     license_kinds: [
-    "SPDX-license-identifier-Apache-2.0",
-    "SPDX-license-identifier-MIT",
+        "SPDX-license-identifier-Apache-2.0",
+        "SPDX-license-identifier-MIT",
     ],
     license_text: [
-    "LICENSE",
+        "LICENSE",
     ],
+}
+
+java_library {
+    name: "mockito-kotlin-nodeps",
+    hostdex: true,
+    srcs: ["mockito-kotlin/src/main/**/*.kt"],
+    libs: [
+        "mockito",
+        "kotlinx_coroutines",
+    ],
+
+    sdk_version: "module_current",
+
+    host_supported: true,
 }
 
 java_library_static {
@@ -51,10 +65,12 @@ java_library_static {
     hostdex: true,
     srcs: ["mockito-kotlin/src/main/**/*.kt"],
 
-    static_libs: ["mockito", "kotlinx_coroutines"],
+    static_libs: [
+        "mockito",
+        "kotlinx_coroutines",
+    ],
 
     sdk_version: "module_current",
 
     host_supported: true,
 }
-
