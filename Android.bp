@@ -53,6 +53,8 @@ java_library_static {
 
     static_libs: ["mockito", "kotlinx_coroutines"],
 
-    sdk_version: "module_current"
+    sdk_version: "module_current",
+
+    host_supported: true,
 }
 
