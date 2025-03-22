@@ -1,11 +1,12 @@
 # Mockito-Kotlin
 [ ![Download](https://maven-badges.herokuapp.com/maven-central/org.mockito.kotlin/mockito-kotlin/badge.svg) ](https://maven-badges.herokuapp.com/maven-central/org.mockito.kotlin/mockito-kotlin)
+[![Nexus Snapshot](https://img.shields.io/nexus/s/org.mockito.kotlin/mockito-kotlin?server=https%3A%2F%2Fs01.oss.sonatype.org%2F)](https://s01.oss.sonatype.org/content/repositories/snapshots/org/mockito/kotlin/mockito-kotlin/)
 
 A small library that provides helper functions to work with [Mockito](https://github.com/mockito/mockito) in Kotlin.
 
 ## Install
 
-Mockito-Kotlin is available on Maven Central and JCenter.
+Mockito-Kotlin is available on Maven Central.
 For Gradle users, add the following to your `build.gradle`, replacing `x.x.x` with the latest version:
 
 ```groovy
@@ -39,27 +40,21 @@ For more info and samples, see the [Wiki](https://github.com/mockito/mockito-kot
 
 Mockito-Kotlin is built with Gradle.
 
- - `./gradlew build` builds the project
+ - `./gradlew build` builds and tests the project
  - `./gradlew publishToMavenLocal` installs the maven artifacts in your local repository
- - `./gradlew assemble && ./gradlew test` runs the test suite (See Testing below)
+ - `./gradlew check` runs the test suite (See Testing below)
 
 ### Versioning
 
-Mockito-Kotlin roughly follows SEMVER; version names are parsed from 
-git tags using `git describe`.
+Mockito-Kotlin roughly follows SEMVER
 
 ### Testing
 
 Mockito-Kotlin's test suite is located in a separate `tests` module,
 to allow running the tests using several Kotlin versions whilst still
-keeping the base module at a recent version.  
+keeping the base module at a recent version.
 
-Testing thus must be done in two stages: one to build the base artifact
-to test against, and the actual execution of the tests against the 
-built artifact:
-
- - `./gradlew assemble` builds the base artifact
- - `./gradlew test` runs the tests against the built artifact.
+ - `./gradlew check` runs the checks including tests.
 
 Usually it is enough to test only using the default Kotlin versions; 
 CI will test against multiple versions.

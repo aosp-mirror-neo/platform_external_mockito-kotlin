@@ -7,8 +7,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.actor
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.mockito.InOrder
 import org.mockito.kotlin.*
+import java.util.*
 
 
 class CoroutinesTest {
@@ -157,11 +163,234 @@ class CoroutinesTest {
             verify(testSubject).suspending()
         }
     }
+
+    @Test
+    fun answerWithSuspendFunction() = runBlocking {
+        val fixture: SomeInterface = mock()
+
+        whenever(fixture.suspendingWithArg(any())).doSuspendableAnswer {
+            withContext(Dispatchers.Default) { it.getArgument<Int>(0) }
+        }
+
+        assertEquals(5, fixture.suspendingWithArg(5))
+    }
+
+    @Test
+    fun inplaceAnswerWithSuspendFunction() = runBlocking {
+        val fixture: SomeInterface = mock {
+            onBlocking { suspendingWithArg(any()) } doSuspendableAnswer {
+                withContext(Dispatchers.Default) { it.getArgument<Int>(0) }
+            }
+        }
+
+        assertEquals(5, fixture.suspendingWithArg(5))
+    }
+
+    @Test
+    fun callFromSuspendFunction() = runBlocking {
+        val fixture: SomeInterface = mock()
+
+        whenever(fixture.suspendingWithArg(any())).doSuspendableAnswer {
+            withContext(Dispatchers.Default) { it.getArgument<Int>(0) }
+        }
+
+        val result = async {
+            val answer = fixture.suspendingWithArg(5)
+
+            Result.success(answer)
+        }
+
+        assertEquals(5, result.await().getOrThrow())
+    }
+
+    @Test
+    fun callFromActor() = runBlocking {
+        val fixture: SomeInterface = mock()
+
+        whenever(fixture.suspendingWithArg(any())).doSuspendableAnswer {
+            withContext(Dispatchers.Default) { it.getArgument<Int>(0) }
+        }
+
+        val actor = actor<Optional<Int>> {
+            for (element in channel) {
+                fixture.suspendingWithArg(element.get())
+            }
+        }
+
+        actor.send(Optional.of(10))
+        actor.close()
+
+        verify(fixture).suspendingWithArg(10)
+
+        Unit
+    }
+
+    @Test
+    fun answerWithSuspendFunctionWithoutArgs() = runBlocking {
+        val fixture: SomeInterface = mock()
+
+        whenever(fixture.suspending()).doSuspendableAnswer {
+            withContext(Dispatchers.Default) { 42 }
+        }
+
+        assertEquals(42, fixture.suspending())
+    }
+
+    @Test
+    fun willAnswerWithControlledSuspend() = runBlocking {
+        val fixture: SomeInterface = mock()
+
+        val job = Job()
+
+        whenever(fixture.suspending()).doSuspendableAnswer {
+            job.join()
+            5
+        }
+
+        val asyncTask = async {
+            fixture.suspending()
+        }
+
+        job.complete()
+
+        withTimeout(100) {
+            assertEquals(5, asyncTask.await())
+        }
+    }
+
+    @Test
+    fun inOrderRemainsCompatible() {
+        /* Given */
+        val fixture: SomeInterface = mock()
+
+        /* When */
+        val inOrder = inOrder(fixture)
+
+        /* Then */
+        expect(inOrder).toBeInstanceOf<InOrder>()
+    }
+
+    @Test
+    fun inOrderSuspendingCalls() {
+        /* Given */
+        val fixtureOne: SomeInterface = mock()
+        val fixtureTwo: SomeInterface = mock()
+
+        /* When */
+        runBlocking {
+            fixtureOne.suspending()
+            fixtureTwo.suspending()
+        }
+
+        /* Then */
+        val inOrder = inOrder(fixtureOne, fixtureTwo)
+        inOrder.verifyBlocking(fixtureOne) { suspending() }
+        inOrder.verifyBlocking(fixtureTwo) { suspending() }
+    }
+
+    @Test
+    fun inOrderSuspendingCallsFailure() {
+        /* Given */
+        val fixtureOne: SomeInterface = mock()
+        val fixtureTwo: SomeInterface = mock()
+
+        /* When */
+        runBlocking {
+            fixtureOne.suspending()
+            fixtureTwo.suspending()
+        }
+
+        /* Then */
+        val inOrder = inOrder(fixtureOne, fixtureTwo)
+        inOrder.verifyBlocking(fixtureTwo) { suspending() }
+        assertThrows(AssertionError::class.java) {
+            inOrder.verifyBlocking(fixtureOne) { suspending() }
+        }
+    }
+
+    @Test
+    fun inOrderBlockSuspendingCalls() {
+        /* Given */
+        val fixtureOne: SomeInterface = mock()
+        val fixtureTwo: SomeInterface = mock()
+
+        /* When */
+        runBlocking {
+            fixtureOne.suspending()
+            fixtureTwo.suspending()
+        }
+
+        /* Then */
+        inOrder(fixtureOne, fixtureTwo) {
+            verifyBlocking(fixtureOne) { suspending() }
+            verifyBlocking(fixtureTwo) { suspending() }
+        }
+    }
+
+    @Test
+    fun inOrderBlockSuspendingCallsFailure() {
+        /* Given */
+        val fixtureOne: SomeInterface = mock()
+        val fixtureTwo: SomeInterface = mock()
+
+        /* When */
+        runBlocking {
+            fixtureOne.suspending()
+            fixtureTwo.suspending()
+        }
+
+        /* Then */
+        inOrder(fixtureOne, fixtureTwo) {
+            verifyBlocking(fixtureTwo) { suspending() }
+            assertThrows(AssertionError::class.java) {
+                verifyBlocking(fixtureOne) { suspending() }
+            }
+        }
+    }
+
+    @Test
+    fun inOrderOnObjectSuspendingCalls() {
+        /* Given */
+        val fixture: SomeInterface = mock()
+
+        /* When */
+        runBlocking {
+            fixture.suspendingWithArg(1)
+            fixture.suspendingWithArg(2)
+        }
+
+        /* Then */
+        fixture.inOrder {
+            verifyBlocking { suspendingWithArg(1) }
+            verifyBlocking { suspendingWithArg(2) }
+        }
+    }
+
+    @Test
+    fun inOrderOnObjectSuspendingCallsFailure() {
+        /* Given */
+        val fixture: SomeInterface = mock()
+
+        /* When */
+        runBlocking {
+            fixture.suspendingWithArg(1)
+            fixture.suspendingWithArg(2)
+        }
+
+        /* Then */
+        fixture.inOrder {
+            verifyBlocking { suspendingWithArg(2) }
+            assertThrows(AssertionError::class.java) {
+                verifyBlocking { suspendingWithArg(1) }
+            }
+        }
+    }
 }
 
 interface SomeInterface {
 
     suspend fun suspending(): Int
+    suspend fun suspendingWithArg(arg: Int): Int
     fun nonsuspending(): Int
 }
 
