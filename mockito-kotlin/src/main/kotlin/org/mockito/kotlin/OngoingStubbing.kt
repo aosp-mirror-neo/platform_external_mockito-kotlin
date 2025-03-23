@@ -27,9 +27,9 @@ package org.mockito.kotlin
 
 import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
+import org.mockito.kotlin.internal.SuspendableAnswer
 import org.mockito.stubbing.Answer
 import org.mockito.stubbing.OngoingStubbing
-import kotlin.DeprecationLevel.ERROR
 import kotlin.reflect.KClass
 
 
@@ -123,4 +123,8 @@ infix fun <T> OngoingStubbing<T>.doAnswer(answer: Answer<*>): OngoingStubbing<T>
  */
 infix fun <T> OngoingStubbing<T>.doAnswer(answer: (InvocationOnMock) -> T?): OngoingStubbing<T> {
     return thenAnswer(answer)
+}
+
+infix fun <T> OngoingStubbing<T>.doSuspendableAnswer(answer: suspend (InvocationOnMock) -> T?): OngoingStubbing<T> {
+    return thenAnswer(SuspendableAnswer(answer))
 }
